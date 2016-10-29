@@ -1,14 +1,24 @@
 ---
-- name: Launch instance(s)
+
+- name: Get CoreOS images
+  hosts: CoreOS
+  tasks:
+    - name: Download and unarchive a file
+      unarchive:
+          src: https://stable.release.core-os.net/amd64-usr/current/coreos_production_qemu_image.img.bz2
+          dest: "{{ image_dir }}/coreos_production_qemu_image.img"
+          remote_src: "yes"
+
+- name: Node configs
   hosts: CoreOS-Node
-  become: no
-connection: local
-tasks:
+  tasks:
     - name: "check inventary"
       debug:
         msg: "echo  {{ hostvars[ item ].ansible_host}} {{ hostvars[ item ].inventory_hostname}} "
       with_items: '{{ hostvars }}'
-    - name: Create a directory
+    - name: Copy image
+      command: "qemu-img create -f qcow2 -b {{ image_dir }}/coreos_production_qemu_image.img {{ image_dir }}/{{ ansible_host }}.qcow2"
+    - name: Create cloud config directory
       file:
           path: "{{ image_dir }}/{{ ansible_host }}/openstack/latest"
           state: "directory"
@@ -16,3 +26,16 @@ tasks:
       template:
           src: "/user_data.j2"
           dest: "{{ image_dir }}/{{ ansible_host }}/openstack/latest/user_data"
+    - name: Create virtual mashine
+      command: |
+            virt-install --connect qemu:///system --import \
+                 --name {{ ansible_host }} \
+                 --ram 1024 \
+                 --vcpus 1 \
+                 --os-type=linux \
+                 --os-variant=virtio26 \
+                 --disk path={{ image_dir }}/{{ ansible_host }}.qcow2,format=qcow2,bus=virtio \
+                 --filesystem  {{ image_dir }}/{{ ansible_host }}/,config-2,type=mount,mode=squash \
+                 --network bridge=virbr0,type=bridge \
+                 --vnc \
+                 --noautoconsole
