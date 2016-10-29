@@ -1,0 +1,44 @@
+[CoreOS]
+localhost.localdomain ansible_host=127.0.0.1 ansible_connection=local ansible_user=root
+
+[CoreOS-Node]
+coreos1  ansible_host=127.0.0.1 ansible_connection=local
+coreos2  ansible_host=127.0.0.1 ansible_connection=local
+coreos3  ansible_host=127.0.0.1 ansible_connection=local
+
+[CoreOS-Nodes:vars]
+ssh_key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDH9rCpHVVfaUuTOt2XYzNkZJWZfoHOyKiJTj1Pl4L7zOn84Trr/uH8+m/W6EieDmLH2wgt6Dlmy+rY//jBpxdBn5xd37Fq/gKCbA5P+wsUald0f5w6M/u06NeZ8TcyPtCRYzvXYCXrIlgQJR9Np4GcfkeSTgmbNnN0M5jUwZxYWmlp4C7QOeyiVPjM7rn64qm3SHjFk6LWnCoVB09kZAaC7rpIezMhrwLUIFCIHQsKwvpO4K92Q8vEz4Jzll0FSbIomzIy/PW2naqCgePvJE6r3QMgLi1Rwyb1FAMhGdwgtnc/i4DjGEfXTzMzy+HZkapZ7ftQof2TVcJc4u4/9nBJ"
+cluster_member=
+image_dir="ls /var/lib/libvirt/images"
+timezone=Europe/Berlin
+nfs_share=192.168.122.155:/srv/nfs/mongodb
+cluster_nodes="coreos1=http://192.168.122.150:2380,coreos2=http://192.168.122.69:2380,coreos3=http://192.168.122.99:2380"
+
+###################################################################
+# Create an OSEv3 group that contains the masters and nodes groups
+[OSEv3:children]
+masters
+nodes
+
+# Set variables common for all OSEv3 hosts
+[OSEv3:vars]
+# SSH user, this user should allow ssh based auth without requiring a password
+ansible_ssh_user=root
+
+# If ansible_ssh_user is not root, ansible_become must be set to true
+#ansible_become=true
+
+deployment_type=origin
+
+# uncomment the following to enable htpasswd authentication; defaults to DenyAllPasswordIdentityProvider
+#openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
+
+# host group for masters
+[masters]
+master.example.com
+
+# host group for nodes, includes region info
+[nodes]
+master.example.com openshift_node_labels="{'region': 'infra', 'zone': 'default'}"
+node1.example.com openshift_node_labels="{'region': 'primary', 'zone': 'east'}"
+node2.example.com openshift_node_labels="{'region': 'primary', 'zone': 'west'}"

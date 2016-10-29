@@ -1,0 +1,18 @@
+---
+- name: Launch instance(s)
+  hosts: CoreOS-Node
+  become: no
+connection: local
+tasks:
+    - name: "check inventary"
+      debug:
+        msg: "echo  {{ hostvars[ item ].ansible_host}} {{ hostvars[ item ].inventory_hostname}} "
+      with_items: '{{ hostvars }}'
+    - name: Create a directory
+      file:
+          path: "{{ image_dir }}/{{ ansible_host }}/openstack/latest"
+          state: "directory"
+    - name: Create cloud config
+      template:
+          src: "/user_data.j2"
+          dest: "{{ image_dir }}/{{ ansible_host }}/openstack/latest/user_data"
