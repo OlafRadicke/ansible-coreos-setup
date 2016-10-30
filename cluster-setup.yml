@@ -1,36 +1,50 @@
 ---
 
 - name: Setup NFS shares
-  host: NFS-Host
+  hosts: "NFS-Host"
   vars:
     - coreos_shares: '["mongodb", "nginx"]'
   tasks:
     - name: Create nfs direktories
       file:
-          path: "/serv/coreos-nfs-shares/{{ item }}"
+          path: "/srv/coreos-nfs-shares/{{ item }}"
           state: "directory"
           mode: 0755
-          with_items: "{{ coreos_shares }}"
-    - name: "Update jenkins systemd files"
+      with_items: "{{ coreos_shares }}"
+    - name: "Update nfs config"
       lineinfile:
-          dest: ="/etc/exports.d/coreos-cluster-shares.exports"
-          line: ="/srv/coreos-nfs-shares/{{ item }}  {{ clientsaccess }}"
+          dest: "/etc/exports.d/coreos-cluster-shares.exports"
+          line: "/srv/coreos-nfs-shares/{{ item }}  {{ clientsaccess }}"
           create: "yes"
+          state: "present"
           mode: "0644"
-          with_items: "{{ coreos_shares }}"
+      with_items: "{{ coreos_shares }}"
     - name: "refreash exportfs"
       shell: "exportfs -ra"
 
-- name: Download CoreOS images
+- name: Setup node configs
   hosts: CoreOS-VirtHost
   tasks:
-    - name: Download and unarchive a file
-      unarchive:
-          src: https://stable.release.core-os.net/amd64-usr/current/coreos_production_qemu_image.img.bz2
-          dest: "{{ image_dir }}/coreos_production_qemu_image.img"
-          remote_src: "yes"
+    # This module is no supporting bz2 format
+#  - name: Unarchive images
+#    unarchive:
+#        src: "{{ image_dir }}/coreos_production_qemu_image.img.bz2"
+#        dest: "{{ image_dir }}/"
+#        remote_src: "yes"
+    - name: Download images
+      get_url:
+        url: https://stable.release.core-os.net/amd64-usr/current/coreos_production_qemu_image.img.bz2
+        dest: "{{ image_dir }}/coreos_production_qemu_image.img.bz2"
+        mode: 0440
+    - name: Unarchive image
+      command: "bzip2 -d -k ./coreos_production_qemu_image.img.bz2"
+      args:
+        chdir: "{{ image_dir }}"
+        creates: "{{ image_dir }}/coreos_production_qemu_image.img"
     - name: Copy image
-      command: "qemu-img create -f qcow2 -b {{ image_dir }}/coreos_production_qemu_image.img {{ image_dir }}/{{ item }}.qcow2"
+      command: "qemu-img create -f qcow2 -b ./coreos_production_qemu_image.img ./{{ item }}.qcow2"
+      args:
+        chdir: "{{ image_dir }}"
       with_items: "{{ coreos_nodes }}"
     - name: Create cloud config directory
       file:
@@ -39,7 +53,7 @@
       with_items: "{{ coreos_nodes }}"
     - name: Create cloud config
       template:
-          src: "/user_data.j2"
+          src: "user_data.j2"
           dest: "{{ image_dir }}/{{ item }}/openstack/latest/user_data"
       with_items: "{{ coreos_nodes }}"
     - name: Create virtual mashine
@@ -51,19 +65,23 @@
                  --os-type=linux \
                  --os-variant=virtio26 \
                  --disk path={{ image_dir }}/{{ item }}.qcow2,format=qcow2,bus=virtio \
-                 --filesystem  {{ image_dir }}/{{ ansible_host }}/,config-2,type=mount,mode=squash \
-                 --network bridge=virbr0,type=bridge \
+                 --filesystem  {{ image_dir }}/{{ item }}/,config-2,type=mount,mode=squash \
+                 --network bridge=virbr0 \
                  --vnc \
                  --noautoconsole
       with_items: "{{ coreos_nodes }}"
-
+      ignore_errors: yes
+    - name: Rebbot virtual mashine
+      command: "virsh reboot {{ item }}"
+      with_items: "{{ coreos_nodes }}"
 
 - name: Node configs
   hosts: CoreOS-Node
   tasks:
     - name: Create virtual mashine
-      chdir: "/tmp/"
       command: "fleetctl submit ./mongodb.service ./nginx.service"
+      args:
+        chdir: "/tmp/"
     - name: Create virtual mashine
       command: "fleetctl start mongodb.service nginx.service"
 #    - name: "check inventary"

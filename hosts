@@ -3,19 +3,19 @@ localhost.localdomain ansible_host=127.0.0.1 ansible_connection=local ansible_us
 
 [CoreOS-VirtHost:vars]
 coreos_nodes='["coreos1", "coreos2", "coreos3"]'
-nfs_host=192.168.125.35
+nfs_host=192.168.124.35
 ssh_key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDe7Jug2bOAR8Ko/AT3c4q5WDwvm44uRPaG60ueLYIjus2hGyqlNdioj1bz80MjF8SjSihBcs/viwdZ1uttZhI11GOZC9Z9U3IlN2BGS0joT06muVxu4a+Krbrelpnalinl7VXg1iL2o3zzZY0J7YiZJ3PdNJHP/JP8+2aDkK3PhfqMJZHIJ0ifo3L3H1D7AhLESTrjkx+xCAgmChuZg2jtZ/TTGzfxv7bQpWiH/rniWg8XSkf65oWt8tfvwckC7u0DjtEvZqGFLoYUF3WLLykD7GKZhzdE775i5+gcE5IWNSXyM35LdSK3a4bt5S0m4zmrgfD1cOnhBAx+IC7xJw4D  briefkasten@olaf-radicke.de"
-cluster_nodes="coreos1=http://192.168.122.150:2380,coreos2=http://192.168.122.69:2380,coreos3=http://192.168.122.99:2380"
-image_dir="ls /var/lib/libvirt/images"
+cluster_nodes="coreos1=http://192.168.124.72:2380,coreos2=http://192.168.124.154:2380,coreos3=http://192.168.124.85:2380"
+image_dir="/var/lib/libvirt/images"
 timezone=Europe/Berlin
 
 [NFS-Host]
-nfs-host.localdomain ansible_host=192.168.125.35 ansible_connection=ssh ansible_user=root
+nfs-host.localdomain ansible_host=192.168.124.35 ansible_connection=ssh ansible_user=root
 
 [NFS-Host:vars]
 clientsaccess="192.168.124.0/255.255.255.0(rw,async,no_root_squash,no_subtree_check)"
 
 [CoreOS-Node]
-coreos1  ansible_host=127.0.0.1 ansible_connection=ssh
-coreos2  ansible_host=127.0.0.1 ansible_connection=ssh
-coreos3  ansible_host=127.0.0.1 ansible_connection=ssh
+coreos1  ansible_host=192.168.124.72 ansible_connection=ssh ansible_user=core
+#coreos2  ansible_host=192.168.124.154 ansible_connection=ssh ansible_user=core
+#coreos3  ansible_host=192.168.124.85 ansible_connection=ssh ansible_user=core
