@@ -9,7 +9,7 @@ mongodb service and using an NFS share for persistent data.
 
 - Crate a VM with NFS export.
 - Create KVM virtual machines and note the IP addresses.
-- Rename the "hosts.example" in "hosts" and modify the entries (with the IP addresses).
+- Modify the entries in the host file (with the IP addresses).
 - Enter:
 
 ```

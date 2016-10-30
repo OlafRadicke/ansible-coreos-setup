@@ -34,13 +34,20 @@ coreos:
     - name: rpc-statd.service
       command: start
       enable: true
-    - name: srv-nfs-rocketchat.mount
+    - name: srv-nfs-mongodb.mount
       command: start
       content: |
-        [Mount]
-        What={{ nfs_share }}
-        Where=/srv/nfs/mongodb
-        Type=nfs
+            [Mount]
+            What="{{ nfs_host }}:/srv/coreos-nfs-shares/mongodb"
+            Where=/srv/nfs/mongodb
+            Type=nfs
+    - name: srv-nfs-nginx.mount
+      command: start
+      content: |
+            [Mount]
+            What="{{ nfs_host }}:/srv/coreos-nfs-shares/nginx"
+            Where=/srv/nfs/nginx
+            Type=nfs
 
   etcd2:
     name: {{ ansible_host }}
@@ -55,16 +62,16 @@ coreos:
     public-ip: coreos1
 
 write_files:
-  - path: "/tmp/mongo.service"
+  - path: "/tmp/mongodb.service"
     permissions: "0644"
     owner: "root"
     content: |
       [Unit]
       Description=MongoDB service
       After=flanneld.service
-      After=srv-nfs-rocketchat.mount
+      After=ssrv-nfs-mongodb.mount
       Requires=flanneld.service
-      Requires=srv-nfs-rocketchat.mount
+      Requires=srv-nfs-mongodb.mount
 
       [Service]
       TimeoutStartSec=0
@@ -84,3 +91,31 @@ write_files:
       [X-Fleet]
       Global=fals
 #      MachineOf=rocketchat.service
+  - path: "/tmp/nginx.service"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      [Unit]
+      Description=Nginx service
+      After=flanneld.service
+      After=srv-nfs-nginx.mount
+      Requires=flanneld.service
+      Requires=srv-nfs-nginx.mount
+
+      [Service]
+      TimeoutStartSec=0
+      KillMode=none
+      EnvironmentFile=/etc/environment
+      ExecStartPre=-/usr/bin/docker kill nginx%i
+      ExecStartPre=-/usr/bin/docker rm nginx%i
+      ExecStartPre=/usr/bin/docker pull nginx:latest
+      ExecStart=/usr/bin/docker run \
+          --name mongo%i \
+          -v /srv/nfs/nginx:/usr/share/nginx/html:ro \
+          mongo:latest \
+          --smallfiles \
+          --oplogSize 128
+      Restart=always
+
+      [X-Fleet]
+      Global=fals
